@@ -1,0 +1,30 @@
+client_name: "Apex Health Systems"
+client_slug: "apex-health"
+
+colors:
+  primary: "0D47A1"
+  secondary: "1976D2"
+  accent: "00ACC1"
+  heading_text: "0D47A1"
+  body_text: "263238"
+  background: "FFFFFF"
+
+typography:
+  heading_font: "Arial"
+  body_font: "Arial"
+  heading_size_pt: 14
+  body_size_pt: 11
+  line_spacing: 1.2
+
+logo:
+  path: "templates/logos/apex-health/logo.png"
+  width_inches: 1.25
+  position: "header"
+
+compliance:
+  frameworks:
+    - "HIPAA"
+    - "SOC2"
+  confidentiality_label: "CONFIDENTIAL — HIPAA Protected"
+  footer_text: "© 2026 Apex Health Systems. Contains Protected Health Information."
+  require_watermark: true

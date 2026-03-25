@@ -1,0 +1,31 @@
+client_name: "Sterling Financial Group"
+client_slug: "sterling-financial"
+
+colors:
+  primary: "1A237E"
+  secondary: "283593"
+  accent: "C6A962"
+  heading_text: "1A237E"
+  body_text: "212121"
+  background: "FFFFFF"
+
+typography:
+  heading_font: "Cambria"
+  body_font: "Calibri"
+  heading_size_pt: 14
+  body_size_pt: 11
+  line_spacing: 1.15
+
+logo:
+  path: "templates/logos/sterling-financial/logo.png"
+  width_inches: 1.5
+  position: "header"
+
+compliance:
+  frameworks:
+    - "FINRA"
+    - "SEC"
+    - "SOX"
+  confidentiality_label: "CONFIDENTIAL — For Authorized Use Only"
+  footer_text: "© 2026 Sterling Financial Group. Securities offered through registered broker-dealer."
+  require_watermark: false

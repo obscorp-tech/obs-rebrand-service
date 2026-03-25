@@ -1,0 +1,42 @@
+# Brand Configuration Template
+# Copy to configs/clients/<client-slug>.yaml and fill in values.
+# client_slug MUST match the filename (without .yaml).
+
+client_name: "Client Display Name"
+client_slug: "client-slug"
+
+colors:
+  primary: "2E75B6"       # Primary brand color (hex, no #)
+  secondary: "4A90D9"     # Secondary brand color
+  accent: "F5A623"        # Accent/highlight color
+  heading_text: "1A1A1A"  # Heading text color
+  body_text: "333333"     # Body text color
+  background: "FFFFFF"    # Background color
+
+typography:
+  heading_font: "Calibri"
+  body_font: "Calibri"
+  heading_size_pt: 14
+  body_size_pt: 11
+  line_spacing: 1.15
+
+# Optional — remove if no logo
+logo:
+  path: "templates/logos/client-slug/logo.png"
+  width_inches: 1.5
+  position: "header"  # header | footer | title-slide
+
+# Optional — compliance metadata
+compliance:
+  frameworks:
+    - "SOC2"
+    # - "HIPAA"
+    # - "SOX"
+    # - "FINRA"
+  confidentiality_label: "CONFIDENTIAL"
+  footer_text: "© 2026 Client Name. All rights reserved."
+  require_watermark: false
+
+# Optional — master templates
+# docx_template: "templates/docx/client-slug-master.docx"
+# pptx_template: "templates/pptx/client-slug-master.pptx"

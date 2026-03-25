@@ -1,0 +1,30 @@
+client_name: "Acme Corporation"
+client_slug: "acme-corp"
+
+colors:
+  primary: "1B5E20"
+  secondary: "4CAF50"
+  accent: "FF9800"
+  heading_text: "1B5E20"
+  body_text: "212121"
+  background: "FFFFFF"
+
+typography:
+  heading_font: "Georgia"
+  body_font: "Calibri"
+  heading_size_pt: 16
+  body_size_pt: 11
+  line_spacing: 1.15
+
+logo:
+  path: "templates/logos/acme-corp/logo.png"
+  width_inches: 1.5
+  position: "header"
+
+compliance:
+  frameworks:
+    - "SOC2"
+    - "SOX"
+  confidentiality_label: "CONFIDENTIAL"
+  footer_text: "© 2026 Acme Corporation. All rights reserved."
+  require_watermark: false
