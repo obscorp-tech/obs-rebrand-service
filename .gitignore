@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Output and temp files
+output/
+queue/
+*.tmp
+~$*
+
+# Logs (committed to /var/log, not repo)
+*.log
+
+# Audit logs (generated, stored as CI artifacts)
+audit_*.json
+
+# Docker
+.docker/
+
+# Env files with secrets
+.env
+.env.local
+.env.production
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
