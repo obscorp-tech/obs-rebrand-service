@@ -22,6 +22,10 @@ src/rebrand_service/     # Core library
 ## Quick Start
 
 ```bash
+# Create and activate virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+
 # Install
 pip install -e ".[dev]"
 
@@ -49,6 +53,7 @@ All rebranding operations are idempotent and logged with SHA-256 checksums of in
 ## Development
 
 ```bash
+source .venv/bin/activate
 pytest tests/ -v
 ruff check src/ tests/
 ruff format src/ tests/

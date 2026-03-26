@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - Ubuntu 22.04+ LTS
-- Python 3.12+
+- Python 3.12+ with `python3-venv` (`sudo apt install python3-venv`)
 - Docker & Docker Compose
 - Git with SSH key configured
 
@@ -12,10 +12,12 @@
 ```bash
 git clone git@github.com:obscorp/rebrand-service.git
 cd rebrand-service
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -e ".[dev]"
 ```
 
-Or use the management script (handles everything):
+Or use the management script (handles everything including venv):
 
 ```bash
 sudo python3 scripts/manage.py install

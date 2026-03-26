@@ -17,15 +17,19 @@ import os
 import shutil
 import subprocess
 import sys
-from datetime import datetime, timezone
+import venv
+from datetime import UTC, datetime
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
 
-REPO_URL = os.environ.get("REBRAND_REPO_URL", "git@github.com:obscorp/rebrand-service.git")
+REPO_URL = os.environ.get(
+    "REBRAND_REPO_URL", "git@github.com:obscorp/rebrand-service.git"
+)
 INSTALL_DIR = Path(os.environ.get("REBRAND_INSTALL_DIR", "/opt/rebrand-service"))
+VENV_DIR = INSTALL_DIR / ".venv"
 BACKUP_DIR = Path("/var/backups/deploy/rebrand-service")
 LOG_DIR = Path("/var/log/deploy")
 LOG_FILE = LOG_DIR / "deploy.log"
@@ -65,7 +69,9 @@ log = setup_logging()
 # ---------------------------------------------------------------------------
 
 
-def run(cmd: list[str], *, check: bool = True, capture: bool = False) -> subprocess.CompletedProcess[str]:
+def run(
+    cmd: list[str], *, check: bool = True, capture: bool = False
+) -> subprocess.CompletedProcess[str]:
     """Run a command, log it, optionally capture output."""
     log.debug("Running: %s", " ".join(cmd))
     result = subprocess.run(
@@ -85,7 +91,7 @@ def is_installed(cmd: str) -> bool:
 
 
 def timestamp() -> str:
-    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
 
 
 def backup_path(name: str) -> Path:
@@ -111,47 +117,75 @@ def backup_file(path: Path) -> Path | None:
     log.info("Backed up %s -> %s", path, dest)
     return dest
 
+
+# ---------------------------------------------------------------------------
+# Virtual environment
+# ---------------------------------------------------------------------------
+
+
+def venv_bin(name: str) -> str:
+    """Return path to a binary inside the venv."""
+    return str(VENV_DIR / "bin" / name)
+
+
+def ensure_venv() -> None:
+    """Create venv if it doesn't exist. Idempotent."""
+    if (VENV_DIR / "bin" / "python").exists():
+        log.info("Venv exists: %s", VENV_DIR)
+        return
+
+    log.info("Creating venv: %s", VENV_DIR)
+    venv.create(str(VENV_DIR), with_pip=True, system_site_packages=False)
+
+    # Upgrade pip inside venv
+    run([venv_bin("pip"), "install", "--upgrade", "pip"])
+    log.info("Venv created successfully")
+
+
+def venv_install(editable_path: str, extras: str = "dev") -> None:
+    """Install package into venv. Idempotent — pip handles already-installed."""
+    ensure_venv()
+    run([venv_bin("pip"), "install", "-e", f"{editable_path}[{extras}]"])
+
+
 # ---------------------------------------------------------------------------
 # Dependency checks
 # ---------------------------------------------------------------------------
 
-REQUIRED_CMDS = ["python3", "pip", "git", "docker", "docker-compose"]
+REQUIRED_SYSTEM_CMDS = ["python3", "git", "docker", "docker-compose"]
+REQUIRED_APT_PACKAGES = ["python3-venv"]
 
 
 def check_dependencies() -> list[str]:
-    """Return list of missing required commands."""
-    missing = [cmd for cmd in REQUIRED_CMDS if not is_installed(cmd)]
-    return missing
+    """Return list of missing required system commands."""
+    return [cmd for cmd in REQUIRED_SYSTEM_CMDS if not is_installed(cmd)]
 
 
 def install_dependencies() -> None:
     """Install missing system dependencies via apt."""
-    missing = check_dependencies()
-    if not missing:
-        log.info("All dependencies present: %s", ", ".join(REQUIRED_CMDS))
-        return
+    missing_cmds = check_dependencies()
 
-    log.info("Missing dependencies: %s", ", ".join(missing))
-
-    # Only install what's missing
-    apt_packages: list[str] = []
-    if "docker" in missing or "docker-compose" in missing:
+    apt_packages: list[str] = list(REQUIRED_APT_PACKAGES)
+    if "docker" in missing_cmds or "docker-compose" in missing_cmds:
         apt_packages.extend(["docker.io", "docker-compose"])
-    if "git" in missing:
+    if "git" in missing_cmds:
         apt_packages.append("git")
 
-    if apt_packages:
-        log.info("Installing: %s", ", ".join(apt_packages))
-        run(["sudo", "apt-get", "update", "-qq"])
-        run(["sudo", "apt-get", "install", "-y", "-qq", *apt_packages])
+    if missing_cmds:
+        log.info("Missing system commands: %s", ", ".join(missing_cmds))
 
-    # Verify
+    # Always ensure python3-venv is installed (idempotent via apt)
+    log.info("Ensuring apt packages: %s", ", ".join(apt_packages))
+    run(["sudo", "apt-get", "update", "-qq"])
+    run(["sudo", "apt-get", "install", "-y", "-qq", *apt_packages])
+
     still_missing = check_dependencies()
     if still_missing:
         log.error("Failed to install: %s", ", ".join(still_missing))
         sys.exit(1)
 
-    log.info("All dependencies installed successfully")
+    log.info("All system dependencies present")
+
 
 # ---------------------------------------------------------------------------
 # Git operations
@@ -196,8 +230,10 @@ def setup_git_ssh_key() -> None:
     pub = key_path.with_suffix(".pub").read_text().strip()
     log.info("Public key (add to GitHub deploy keys):\n%s", pub)
     log.info(
-        "Add this key at: https://github.com/obscorp/rebrand-service/settings/keys"
+        "Add this key at: "
+        "https://github.com/obscorp/rebrand-service/settings/keys"
     )
+
 
 # ---------------------------------------------------------------------------
 # Docker operations
@@ -207,7 +243,11 @@ def setup_git_ssh_key() -> None:
 def docker_build() -> None:
     """Build Docker image. Idempotent — uses layer cache."""
     log.info("Building Docker image")
-    run(["docker-compose", "-f", str(INSTALL_DIR / "docker-compose.yaml"), "build"])
+    run([
+        "docker-compose",
+        "-f", str(INSTALL_DIR / "docker-compose.yaml"),
+        "build",
+    ])
 
 
 def docker_up() -> None:
@@ -235,6 +275,7 @@ def docker_status() -> None:
         run(["docker-compose", "-f", str(compose_file), "ps"])
     else:
         log.warning("docker-compose.yaml not found at %s", compose_file)
+
 
 # ---------------------------------------------------------------------------
 # Config backup/restore
@@ -276,6 +317,7 @@ def backup_docker_volumes() -> None:
             ], check=False)
             log.info("Volume %s backed up to %s", vol_name, dest)
 
+
 # ---------------------------------------------------------------------------
 # Commands
 # ---------------------------------------------------------------------------
@@ -288,16 +330,24 @@ def cmd_install() -> None:
     setup_git_ssh_key()
     clone_or_pull()
 
-    # Install Python package in dev mode
-    run(["pip", "install", "-e", f"{INSTALL_DIR}[dev]", "--break-system-packages"])
+    # Create venv and install package
+    ensure_venv()
+    venv_install(str(INSTALL_DIR))
 
     docker_build()
     docker_up()
 
-    # Validate configs
-    run(["rebrand", "validate", "--configs-dir", str(INSTALL_DIR / "configs" / "clients")], check=False)
+    # Validate configs using venv's rebrand CLI
+    run(
+        [
+            venv_bin("rebrand"), "validate",
+            "--configs-dir", str(INSTALL_DIR / "configs" / "clients"),
+        ],
+        check=False,
+    )
 
     log.info("=== INSTALL COMPLETE ===")
+    log.info("Activate venv: source %s/bin/activate", VENV_DIR)
     docker_status()
 
 
@@ -322,13 +372,21 @@ def cmd_update() -> None:
     # Pull latest
     clone_or_pull()
 
-    # Rebuild and restart (preserves volumes)
-    run(["pip", "install", "-e", f"{INSTALL_DIR}[dev]", "--break-system-packages"])
+    # Reinstall into existing venv (idempotent — pip upgrades if needed)
+    ensure_venv()
+    venv_install(str(INSTALL_DIR))
+
     docker_build()
     docker_up()
 
     # Validate
-    run(["rebrand", "validate", "--configs-dir", str(INSTALL_DIR / "configs" / "clients")], check=False)
+    run(
+        [
+            venv_bin("rebrand"), "validate",
+            "--configs-dir", str(INSTALL_DIR / "configs" / "clients"),
+        ],
+        check=False,
+    )
 
     log.info("=== UPDATE COMPLETE ===")
     docker_status()
@@ -357,7 +415,7 @@ def cmd_clean() -> None:
                 run(["docker", "volume", "rm", vol_name], check=False)
                 log.info("Removed volume: %s", vol_name)
 
-    # Remove install directory
+    # Remove install directory (includes .venv)
     if INSTALL_DIR.exists():
         shutil.rmtree(INSTALL_DIR)
         log.info("Removed %s", INSTALL_DIR)
@@ -384,6 +442,13 @@ def cmd_status() -> None:
             log.info("Git HEAD: %s", result.stdout.strip())
     else:
         log.warning("Not installed at %s", INSTALL_DIR)
+
+    # Venv status
+    venv_python = VENV_DIR / "bin" / "python"
+    if venv_python.exists():
+        log.info("Venv: %s", VENV_DIR)
+    else:
+        log.warning("Venv not found at %s", VENV_DIR)
 
     # Docker status
     docker_status()
